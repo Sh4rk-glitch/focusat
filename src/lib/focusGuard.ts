@@ -17,10 +17,10 @@ function windowLost(): boolean {
 }
 
 export function attachFocusGuard(opts: Opts): () => void {
-  const fire = () => {
+  const fire = (force = false) => {
     if (opts.ignore()) return
     if (!opts.armed()) return
-    if (!windowLost()) return
+    if (!force && !windowLost()) return
     opts.onLeak()
   }
 
@@ -31,10 +31,10 @@ export function attachFocusGuard(opts: Opts): () => void {
   }
 
   const onVis = () => {
-    if (document.hidden) fire()
+    if (document.hidden) fire(true)
   }
 
-  const onPageHide = () => fire()
+  const onPageHide = () => fire(true)
 
   const poll = window.setInterval(() => {
     if (!opts.armed() || opts.ignore()) return

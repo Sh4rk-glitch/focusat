@@ -454,7 +454,7 @@ export function Session() {
             <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
               <p className="eyebrow">Focus leak</p>
               <h2>You left. The clock did not.</h2>
-              <p>Alt+Tab, Escape, another tab — it all counts.</p>
+              <p>Alt+Tab, Escape, another tab, or switching apps — it all counts.</p>
               <button type="button" className="btn btn-gold" onClick={() => void resume()}>
                 I’m back
               </button>
