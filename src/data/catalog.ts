@@ -100,6 +100,16 @@ const META: Record<string, Meta> = {
   w10: { skill: 'writing-rhetoric', difficulty: 5 },
   w11: { skill: 'writing-grammar', difficulty: 4 },
   w12: { skill: 'writing-grammar', difficulty: 2 },
+  m33: { skill: 'systems', difficulty: 3 },
+  m34: { skill: 'quadratics', difficulty: 2 },
+  m35: { skill: 'geometry', difficulty: 3 },
+  m36: { skill: 'percents', difficulty: 3 },
+  m37: { skill: 'functions', difficulty: 2 },
+  r11: { skill: 'reading-structure', difficulty: 3 },
+  r12: { skill: 'reading-vocab', difficulty: 4 },
+  w13: { skill: 'writing-grammar', difficulty: 2 },
+  w14: { skill: 'writing-rhetoric', difficulty: 2 },
+  w15: { skill: 'writing-punct', difficulty: 2 },
 }
 
 export function questionMeta(q: Question): Meta {

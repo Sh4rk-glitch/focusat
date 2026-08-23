@@ -1,10 +1,5 @@
-import { useRef } from 'react'
-import {
-  motion,
-  useScroll,
-  useSpring,
-  useTransform,
-} from 'motion/react'
+import { useRef, useState } from 'react'
+import { AnimatePresence, motion, useMotionValueEvent, useScroll, useSpring, useTransform } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { SESSION_QUESTION_COUNT, SESSION_SECONDS } from '../data/questions'
 import { loadStats } from '../lib/storage'
@@ -17,12 +12,12 @@ import { SpotlightCard } from '../components/SpotlightCard'
 const words = ['Eight', 'minutes.', 'Then', 'you’re', 'done.']
 
 const modules = [
-  { k: '01', t: 'Algebra', d: 'Linear, systems, inequalities — Desmos open beside the stem.' },
-  { k: '02', t: 'Advanced math', d: 'Quadratics, exponents, functions you can actually graph.' },
-  { k: '03', t: 'Problem solving', d: 'Rates, percents, data — the messy numbers phones are good at avoiding.' },
-  { k: '04', t: 'Geometry', d: 'Triangles, circles, trig ratios. Sketch it in Desmos, then lock in.' },
-  { k: '05', t: 'Reading', d: 'Short passages. One claim. No infinite scroll dressed as “just one more article.”' },
-  { k: '06', t: 'Writing', d: 'Conventions and transitions. The unglamorous points that still count.' },
+  { k: '01', t: 'Algebra', d: 'Linear equations', visual: 'y = mx + b' },
+  { k: '02', t: 'Advanced math', d: 'Quadratics + functions', visual: 'f(x) = ax² + bx + c' },
+  { k: '03', t: 'Problem solving', d: 'Rates + data', visual: 'rate = distance / time' },
+  { k: '04', t: 'Geometry', d: 'Shapes + trigonometry', visual: 'a² + b² = c²' },
+  { k: '05', t: 'Reading', d: 'Claims + evidence', visual: 'claim → evidence' },
+  { k: '06', t: 'Writing', d: 'Grammar + rhetoric', visual: 'subject + verb = clarity' },
 ]
 
 export function Home() {
@@ -30,16 +25,22 @@ export function Home() {
   const stats = loadStats()
   const hasHistory = stats.totalSessions > 0
   const minutes = Math.round(SESSION_SECONDS / 60)
-  const { scrollY } = useScroll()
-  const heroY = useTransform(scrollY, [0, 480], [0, -56])
-  const pin = useRef<HTMLDivElement>(null)
-
-  const { scrollYProgress } = useScroll({
-    target: pin,
+  const story = useRef<HTMLDivElement>(null)
+  const gallery = useRef<HTMLDivElement>(null)
+  const { scrollYProgress: storyProgress } = useScroll({
+    target: story,
     offset: ['start start', 'end end'],
   })
-  const x = useTransform(scrollYProgress, [0, 1], ['0%', '-72%'])
-  const smoothX = useSpring(x, { stiffness: 70, damping: 22, mass: 0.4 })
+  const [storyPhase, setStoryPhase] = useState<'social' | 'focus'>('social')
+  useMotionValueEvent(storyProgress, 'change', (value) => {
+    const next = value < 0.5 ? 'social' : 'focus'
+    setStoryPhase((current) => current === next ? current : next)
+  })
+  const phoneRotate = useTransform(storyProgress, [0, 0.5, 1], [-5, 0, 4])
+  const phoneScale = useTransform(storyProgress, [0, 0.5, 1], [0.92, 1, 1.04])
+  const { scrollYProgress: galleryProgress } = useScroll({ target: gallery, offset: ['start start', 'end end'] })
+  const galleryX = useTransform(galleryProgress, [0, 1], ['0%', '-72%'])
+  const smoothGalleryX = useSpring(galleryX, { stiffness: 80, damping: 24, mass: 0.4 })
 
   return (
     <div className="page home">
@@ -52,7 +53,8 @@ export function Home() {
 
       <SiteNav />
 
-      <section className="hero">
+      <section className="landing-hero">
+        <div className="hero-copy">
         <motion.p
           className="eyebrow"
           initial={{ opacity: 0, y: 10 }}
@@ -60,7 +62,7 @@ export function Home() {
         >
           SAT-style practice for distracted phones
         </motion.p>
-        <motion.h1 className="display" style={{ y: heroY }}>
+        <motion.h1 className="display">
           {words.map((w, i) => (
             <motion.span
               key={w}
@@ -79,9 +81,9 @@ export function Home() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.55, duration: 0.8 }}
         >
-          A locked {minutes}-minute session. Mix, Math, or ELA — then an Elo
-          picker that hunts what you miss. Alt+Tab counts. Sign in and the
-          model follows you on this device.
+           A locked {minutes}-minute session that turns distraction into a
+           measurable SAT habit. Answer, learn your weak spots, and come back
+           to a plan that gets sharper with every question.
         </motion.p>
         <motion.div
           className="hero-actions"
@@ -123,7 +125,67 @@ export function Home() {
             </div>
           </motion.div>
         ) : null}
+        </div>
+        <motion.div className="hero-preview" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35, duration: 0.8 }}>
+          <div className="preview-orbit orbit-one" />
+          <div className="preview-orbit orbit-two" />
+          <div className="hero-phone phone-device">
+            <div className="phone-notch" />
+            <div className="phone-screen focus-screen">
+              <span className="screen-status">FOCUSAT</span>
+              <div className="focus-mark">08:00</div>
+              <strong>Question 01</strong>
+              <span>What do you know right now?</span>
+              <div className="focus-line" />
+            </div>
+          </div>
+        </motion.div>
       </section>
+
+      {!user ? (
+        <section ref={story} className="phone-story">
+          <div className="phone-story-sticky">
+            <div className="story-copy">
+              <AnimatePresence mode="wait" initial={false}>
+                {storyPhase === 'social' ? (
+                  <motion.div key="social-copy" className="story-panel" initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} transition={{ duration: 0.28 }}>
+                    <p className="eyebrow">The scroll knows your name</p>
+                    <h2>One more video becomes an hour.</h2>
+                    <p>You opened your phone for a break. The feed opened a loop.</p>
+                  </motion.div>
+                ) : (
+                  <motion.div key="focus-copy" className="story-panel" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.28 }}>
+                    <p className="eyebrow">Take the screen back</p>
+                    <h2>Turn the same impulse into momentum.</h2>
+                    <p>Focusat learns what you know, what you miss, and how long you hesitate.</p>
+                    <Link to="/signup" className="btn btn-gold">Build my starting line <span className="btn-shine" /></Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <motion.div className="phone-device story-phone" style={{ scale: phoneScale, rotate: phoneRotate }}>
+              <div className="phone-notch" />
+              <AnimatePresence mode="wait" initial={false}>
+                {storyPhase === 'social' ? (
+                  <motion.div key="social-screen" className="phone-screen social-screen" initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.3 }}>
+                    <span className="screen-status">9:41</span>
+                    <div className="feed-video"><strong>For You</strong><span>Swipe up for one more</span></div>
+                    <div className="feed-actions"><b>♡</b><b>◌</b><b>↗</b></div>
+                  </motion.div>
+                ) : (
+                  <motion.div key="focus-screen" className="phone-screen focus-screen" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.04 }} transition={{ duration: 0.3 }}>
+                    <span className="screen-status">FOCUSAT</span>
+                    <div className="focus-mark">08:00</div>
+                    <strong>Question 01</strong>
+                    <span>What do you know right now?</span>
+                    <div className="focus-line" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        </section>
+      ) : null}
 
       <div className="ticker">
         <motion.div
@@ -135,18 +197,17 @@ export function Home() {
         >
           {Array.from({ length: 2 }).map((_, k) => (
             <p key={k}>
-              Algebra · Adaptive Elo · Mix / Math / ELA · Desmos · Alt+Tab leaks
-              · You vs should · Review queue · Dashboard ·{' '}
+              8 MINUTES · ADAPTIVE SAT · MATH · READING · WRITING · FOCUS · BITE-SIZED PRACTICE · BLUEBOOK ACCURACY · TARGET WEAKNESSES · MATH & RW · ADAPTIVE ENGINE · INSTANT FEEDBACK · DESMOS READY · PRECISION MATH · EVIDENCE-BASED READING · DAILY DRILLS · SMART ANALYTICS · 1600 BENCHMARK ·{' '}
             </p>
           ))}
         </motion.div>
       </div>
 
-      <div ref={pin} className="pin-wrap">
+      <div ref={gallery} className="pin-wrap">
         <div className="pin-sticky">
           <p className="eyebrow">Scroll the suite</p>
           <h2 className="pin-title">Built like the test. Timed like a dare.</h2>
-          <motion.div className="pin-row" style={{ x: smoothX }}>
+          <motion.div className="pin-row" style={{ x: smoothGalleryX }}>
             {modules.map((m, i) => (
               <motion.div
                 key={m.k}
@@ -160,17 +221,16 @@ export function Home() {
                 <span>{m.k}</span>
                 <h3>{m.t}</h3>
                 <p>{m.d}</p>
+                <div className="card-visual">{m.visual}</div>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </div>
 
-      <section id="how" className="how">
+      <motion.section id="how" className="how" initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-15%' }}>
         <motion.h2
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-10%' }}
+          variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { duration: 0.65 } } }}
         >
           A session, not a study plan.
         </motion.h2>
@@ -179,25 +239,23 @@ export function Home() {
             {
               n: '01',
               t: 'Pick Mix, Math, or ELA',
-              d: 'Then go fullscreen. Alt+Tab, Escape, and other windows all count as leaks. The clock never pauses.',
+              d: 'Fullscreen. No leaks. The clock keeps moving.',
             },
             {
               n: '02',
               t: 'Adaptive, not chatty',
-              d: 'Each miss updates an Elo rating per skill. The next item hunts the hole. Wrong answers enter a review queue.',
+              d: 'Every answer updates the next question.',
             },
             {
               n: '03',
               t: 'You vs should',
-              d: 'The dashboard compares what you actually did to the lane the ratings say you should run next.',
+              d: 'Your dashboard shows where to go next.',
             },
           ].map((item, i) => (
             <motion.div
               key={item.n}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ delay: i * 0.12, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              variants={{ hidden: { opacity: 0, y: 36, scale: 0.94 }, visible: { opacity: 1, y: 0, scale: 1, transition: { delay: i * 0.12, duration: 0.6, ease: [0.22, 1, 0.36, 1] } } }}
+              whileHover={{ y: -8, scale: 1.02 }}
             >
               <SpotlightCard>
                 <span>{item.n}</span>
@@ -207,7 +265,7 @@ export function Home() {
             </motion.div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       <section className="honest">
         <motion.blockquote

@@ -55,6 +55,16 @@ export function estimatedSatScore(rating: number): number {
   return Math.max(200, Math.min(800, Math.round(sectionScore / 10) * 10))
 }
 
+export function estimatedTotalScore(correct: number, total: number, averageTimeMs = 0): number {
+  if (total <= 0) return 0
+  const accuracy = Math.max(0, Math.min(1, correct / total))
+  if (accuracy === 1) return 1600
+  const timePenalty = averageTimeMs > 45_000
+    ? Math.min(0.12, (averageTimeMs - 45_000) / 300_000)
+    : 0
+  return Math.round((400 + 1200 * accuracy * (1 - timePenalty)) / 10) * 10
+}
+
 export function updateReview(
   review: ReviewItem[],
   questionId: string,
@@ -186,8 +196,9 @@ export function focusScore(correct: number, total: number, leaks: number, forfei
 }
 
 export function masteryPct(cell: SkillCell): number {
+  if (cell.seen === 0) return 0
   const fromElo = 1 / (1 + Math.exp(-(cell.rating - START) / 90))
-  const fromAcc = cell.seen === 0 ? 0.45 : cell.correct / cell.seen
+  const fromAcc = cell.correct / cell.seen
   const blend = 0.65 * fromElo + 0.35 * fromAcc
   return Math.round(100 * blend)
 }

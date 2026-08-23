@@ -204,4 +204,107 @@ export const EXTRA_QUESTIONS: Question[] = [
     answer: 0,
     explain: 'Singular “they” is accepted; it agrees with “a student” without assuming gender.',
   },
+  {
+    id: 'm33',
+    section: 'Math',
+    prompt: 'If 2x + 5y = 19 and x - 2y = -4, what is the value of x?',
+    choices: ['2', '3', '4', '5'],
+    answer: 0,
+    explain: 'From the second equation, x = 2y - 4. Substitute into the first: 2(2y - 4) + 5y = 19 -> 9y - 8 = 19 -> 9y = 27 -> y = 3. Then x = 2(3) - 4 = 2.',
+    desmos: '2x+5y=19\\nx-2y=-4',
+  },
+  {
+    id: 'm34',
+    section: 'Math',
+    prompt: 'What are the solutions to x² - 6x - 16 = 0?',
+    choices: ['x = -8 and 2', 'x = 8 and -2', 'x = -4 and 4', 'x = 6 and -16'],
+    answer: 1,
+    explain: 'Factor into (x - 8)(x + 2) = 0, which gives x = 8 and x = -2.',
+    desmos: 'y=x^2-6x-16',
+  },
+  {
+    id: 'm35',
+    section: 'Math',
+    prompt: 'A circle in the xy-plane is given by (x - 3)² + (y + 1)² = 25. What is the center of the circle?',
+    choices: ['(-3, 1)', '(3, -1)', '(3, 1)', '(-3, -1)'],
+    answer: 1,
+    explain: 'The standard form is (x - h)² + (y - k)² = r², where center is (h, k). Here (h, k) = (3, -1).',
+    desmos: '(x-3)^2+(y+1)^2=25',
+  },
+  {
+    id: 'm36',
+    section: 'Math',
+    prompt: 'The price of an item decreased by 20% and then increased by 20%. The final price is what percent of the original price?',
+    choices: ['96%', '100%', '104%', '98%'],
+    answer: 0,
+    explain: 'Let original price = 100. Decreased by 20%: 80. Increased by 20%: 80 * 1.20 = 96. So 96%.',
+  },
+  {
+    id: 'm37',
+    section: 'Math',
+    prompt: 'If f(x) = 2x³ - 5x + 3, what is the value of f(-2)?',
+    choices: ['-3', '-9', '3', '21'],
+    answer: 0,
+    explain: 'f(-2) = 2(-8) - 5(-2) + 3 = -16 + 10 + 3 = -3.',
+  },
+
+  // --- Reading ---
+  {
+    id: 'r11',
+    section: 'Reading',
+    passage:
+      'Historians long assumed early maritime traders avoided open oceans out of fear. However, recent sediment analysis near remote islands reveals ceramic shards dated centuries before formal navigational charts were drawn.',
+    prompt: 'The primary function of the second sentence is to',
+    choices: [
+      'corroborate an established historical consensus',
+      'introduce physical evidence that challenges a traditional assumption',
+      'argue that early navigation methods were unreliable',
+      'dismiss the importance of ceramic artifact dating',
+    ],
+    answer: 1,
+    explain: 'The sentence introduces physical evidence ("ceramic shards") that directly challenges what historians long assumed.',
+  },
+  {
+    id: 'r12',
+    section: 'Reading',
+    passage:
+      'The architect designed the lobby not to dazzle visitors with opulence, but to cultivate a Spartan stillness that forced attention toward the surrounding landscape.',
+    prompt: 'As used in the passage, “Spartan” most nearly means',
+    choices: ['militaristic', 'austere and simple', 'ancient', 'chaotic'],
+    answer: 1,
+    explain: 'Contrasted with "opulence," Spartan refers to a simple, unadorned, austere style.',
+  },
+
+  // --- Writing ---
+  {
+    id: 'w13',
+    section: 'Writing',
+    prompt:
+      'Choose the option that correctly completes the sentence: "The collection of rare manuscripts ___ preserved in a climate-controlled vault."',
+    choices: ['are', 'is', 'were', 'being'],
+    answer: 1,
+    explain: 'The true subject is singular ("The collection"), so the singular verb "is" is required.',
+  },
+  {
+    id: 'w14',
+    section: 'Writing',
+    prompt: 'Which transition best completes the thought? "Solar panel efficiency has risen dramatically; ___, installation costs have dropped by over 70%."',
+    choices: ['furthermore', 'nevertheless', 'otherwise', 'conversely'],
+    answer: 0,
+    explain: '"Furthermore" adds an additional supporting point pointing in the same positive direction.',
+  },
+  {
+    id: 'w15',
+    section: 'Writing',
+    prompt: 'Which sentence is punctuated correctly?',
+    choices: [
+      'The robotics team needed three tools; wire strippers, hex keys, and calipers.',
+      'The robotics team needed three tools: wire strippers, hex keys, and calipers.',
+      'The robotics team needed: wire strippers, hex keys, and calipers.',
+      'The robotics team needed three tools, wire strippers: hex keys, and calipers.',
+    ],
+    answer: 1,
+    explain: 'A colon is used after an independent clause to introduce an itemized list.',
+  },
+  
 ]

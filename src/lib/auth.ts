@@ -46,11 +46,12 @@ export function currentUser(): User | null {
   }
 }
 
-export function fromSupabaseUser(authUser: { id: string; email?: string; user_metadata?: { name?: string; full_name?: string } }): User {
+export function fromSupabaseUser(authUser: { id: string; email?: string; user_metadata?: { name?: string; full_name?: string; avatar_url?: string; picture?: string } }): User {
   return {
     id: authUser.id,
     email: authUser.email ?? '',
     name: authUser.user_metadata?.name ?? authUser.user_metadata?.full_name ?? authUser.email?.split('@')[0] ?? 'Learner',
+    avatarUrl: authUser.user_metadata?.avatar_url ?? authUser.user_metadata?.picture,
   }
 }
 
@@ -146,9 +147,17 @@ export function signOut(): void {
   setCurrentUser(null)
 }
 
-export function updateProfile(userId: string, name: string): User {
+export async function updateProfile(userId: string, name: string): Promise<User> {
   const cleanName = name.trim()
   if (!cleanName) throw new Error('Name cannot be empty.')
+  const { data, error } = await supabase.auth.updateUser({ data: { name: cleanName } })
+  if (!error && data.user) {
+    const user = fromSupabaseUser(data.user)
+    setCurrentUser(user)
+    return user
+  }
+  if (error && !error.message.toLowerCase().includes('failed to fetch')) throw new Error(error.message)
+
   const users = readUsers()
   const index = users.findIndex((user) => user.id === userId)
   if (index < 0) throw new Error('Account not found.')

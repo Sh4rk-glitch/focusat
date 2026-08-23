@@ -1,18 +1,16 @@
 import { Navigate, Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { useAuth } from '../context/AuthContext'
 import {
   loadHistory,
+  loadItemLog,
   loadSkills,
   loadStats,
   nextModeHint,
-  resetProgress,
 } from '../lib/storage'
 import { Logo } from '../components/Logo'
-import { SESSION_QUESTION_COUNT } from '../data/questions'
 import { ELA_SKILLS, MATH_SKILLS, SKILL_LABELS } from '../data/catalog'
-import { estimatedSatScore, masteryPct, meanRating } from '../lib/adaptive'
+import { estimatedTotalScore, masteryPct, meanRating } from '../lib/adaptive'
 import { buildSuggestions } from '../lib/coach'
 import type { SkillId } from '../types'
 
@@ -36,14 +34,14 @@ function SkillList({ ids }: { ids: SkillId[] }) {
   )
 }
 
+function ProfileAvatar({ user }: { user: { name: string; avatarUrl?: string } }) {
+  return user.avatarUrl
+    ? <img className="profile-avatar" src={user.avatarUrl} alt="" />
+    : <span className="profile-avatar profile-initials">{user.name.slice(0, 1).toUpperCase()}</span>
+}
+
 export function Dashboard() {
-  const { user, signOut, updateName } = useAuth()
-  const [dark, setDark] = useState(() => localStorage.getItem('focusat-theme') !== 'light')
-  const [name, setName] = useState(user?.name ?? '')
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  useEffect(() => {
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-  }, [dark])
+  const { user } = useAuth()
   if (!user) return <Navigate to="/signin" replace />
 
   const stats = loadStats()
@@ -53,14 +51,39 @@ export function Dashboard() {
   const rec = nextModeHint()
   const math = meanRating(skills, MATH_SKILLS)
   const ela = meanRating(skills, ELA_SKILLS)
-  const predictedMath = estimatedSatScore(math)
-  const predictedEla = estimatedSatScore(ela)
+  const itemLog = loadItemLog()
+  const averageTime = itemLog.length
+    ? itemLog.reduce((sum, item) => sum + item.elapsedMs, 0) / itemLog.length
+    : 0
+  const predictedTotal = estimatedTotalScore(stats.totalCorrect, stats.totalQuestions, averageTime)
   const accuracy =
     stats.totalQuestions === 0
       ? 0
       : Math.round((stats.totalCorrect / stats.totalQuestions) * 100)
+  const hasPractice = stats.totalQuestions > 0
   const recent = history.filter((h) => !h.forfeited).slice(0, 12)
-  const max = Math.max(SESSION_QUESTION_COUNT, ...recent.map((h) => h.correct), 1)
+
+  if (!hasPractice) {
+    return (
+      <div className="page dash diagnostic-welcome">
+        <header className="nav">
+          <Link to="/" className="logo"><Logo /></Link>
+          <nav><Link to="/settings" className="profile-link" aria-label="Open settings"><ProfileAvatar user={user} /></Link></nav>
+        </header>
+        <motion.main initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
+          <p className="eyebrow">First session</p>
+          <h1 className="dash-hello">Let’s find your starting line, {user.name}.</h1>
+          <p className="diagnostic-copy">8 minutes, 8 questions. Thats all it takes to get your predicted score.</p>
+          <div className="diagnostic-facts">
+            <span><strong>8</strong> SAT questions</span>
+            <span><strong>8</strong>minutes long.</span>
+          </div>
+          <Link to="/session?diagnostic=1" className="btn btn-gold diagnostic-start">Start diagnostic <span className="btn-shine" /></Link>
+          <p className="muted diagnostic-note">Your dashboard will appear after your first completed diagnostic.</p>
+        </motion.main>
+      </div>
+    )
+  }
 
   return (
     <div className="page dash">
@@ -73,12 +96,7 @@ export function Dashboard() {
           <Logo />
         </Link>
         <nav>
-          <button type="button" className="ghost-link" onClick={signOut}>
-            Sign out
-          </button>
-          <Link to={`/session?mode=${rec}`} className="nav-cta">
-            Start
-          </Link>
+          <Link to="/settings" className="profile-link" aria-label="Open settings"><ProfileAvatar user={user} /></Link>
         </nav>
       </header>
 
@@ -92,6 +110,13 @@ export function Dashboard() {
       >
         {user.name}, the phone can wait.
       </motion.h1>
+      <div className="dashboard-primary-action">
+        <Link to={`/session?mode=${rec}`} className="btn btn-gold">
+          Start recommended {rec === 'mix' ? 'mix' : rec === 'math' ? 'math' : 'ELA'} session
+          <span className="btn-shine" />
+        </Link>
+        <span className="muted">Built from your latest answers and response times.</span>
+      </div>
       <div className="dash-grid">
         {[
           { n: stats.streak, l: 'day streak' },
@@ -124,12 +149,12 @@ export function Dashboard() {
           <p>Based on your accuracy, question difficulty, and response time. The curve is calibrated to the 200–800 section scale.</p>
         </div>
         <div className="score-total">
-          <strong>{predictedMath + predictedEla}</strong>
+          <strong>{predictedTotal}</strong>
           <span>/ 1600</span>
         </div>
         <div className="score-breakdown">
-          <div><span>Math</span><strong>{predictedMath}<small>/800</small></strong></div>
-          <div><span>Reading and Writing</span><strong>{predictedEla}<small>/800</small></strong></div>
+          <div><span>Math</span><strong>{Math.round(predictedTotal / 2 / 10) * 10}<small>/800</small></strong></div>
+          <div><span>Reading and Writing</span><strong>{Math.round(predictedTotal / 2 / 10) * 10}<small>/800</small></strong></div>
         </div>
       </motion.section>
 
@@ -180,15 +205,22 @@ export function Dashboard() {
         {recent.length === 0 ? (
           <p className="muted">No finished sessions yet.</p>
         ) : (
-          <div className="bars">
-            {recent
-              .slice()
-              .reverse()
-              .map((h) => (
-                <div key={h.id} className="bar-col" title={`${h.correct}/${h.total}`}>
-                  <div className="bar" style={{ height: `${(h.correct / max) * 100}%` }} />
+          <div className="score-list">
+            {recent.map((h, index) => {
+                const newer = recent[index - 1]
+                const sessionTime = itemLog.filter((item) =>
+                  new Date(item.at) <= new Date(h.at) &&
+                  (!newer || new Date(item.at) < new Date(newer.at)),
+                )
+                const sessionAverage = sessionTime.length
+                  ? sessionTime.reduce((sum, item) => sum + item.elapsedMs, 0) / sessionTime.length
+                  : 0
+                const score = estimatedTotalScore(h.correct, h.total, sessionAverage)
+                return <div key={h.id} className="score-row" title={`${score}/1600 · ${h.correct}/${h.total}`}>
+                  <div className="score-row-meta"><strong>{score}</strong><span>{h.correct}/{h.total} correct</span><time>{new Date(h.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time></div>
+                  <div className="score-track"><i style={{ width: `${(score / 1600) * 100}%` }} /></div>
                 </div>
-              ))}
+              })}
           </div>
         )}
       </section>
@@ -217,45 +249,6 @@ export function Dashboard() {
         </ul>
       </section>
 
-      <section className="dash-panel settings-panel">
-        <button type="button" className="settings-heading" onClick={() => setSettingsOpen((open) => !open)}>
-          <h2>Settings</h2><span>{settingsOpen ? 'Hide' : 'Open'}</span>
-        </button>
-        {settingsOpen ? (
-          <div className="settings-grid">
-            <form onSubmit={(event) => { event.preventDefault(); updateName(name) }}>
-              <label>Your Name<input value={name} onChange={(event) => setName(event.target.value)} /></label>
-              <button type="submit" className="btn btn-ghost">Save name</button>
-            </form>
-            <button type="button" className="theme-toggle" onClick={(event) => {
-              const next = !dark
-              const button = event.currentTarget
-              document.body.style.setProperty('--wave-x', `${event.clientX}px`)
-              document.body.style.setProperty('--wave-y', `${event.clientY}px`)
-              button.classList.remove('wave-active')
-              void button.offsetWidth
-              button.classList.add('wave-active')
-              document.body.dataset.themeWave = next ? 'dark' : 'light'
-              window.setTimeout(() => {
-                delete document.body.dataset.themeWave
-                button.classList.remove('wave-active')
-              }, 720)
-              setDark(next)
-              localStorage.setItem('focusat-theme', next ? 'dark' : 'light')
-            }}>
-              <span className="theme-icon" aria-hidden="true">{dark ? '☼' : '☾'}</span>
-              Switch to {dark ? 'light' : 'dark'} mode
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => {
-              if (window.confirm('Delete all sessions, ratings, and wrong answers?')) {
-                resetProgress()
-                window.location.reload()
-              }
-            }}>Delete all progress</button>
-            <button type="button" className="btn btn-ghost" onClick={signOut}>Log out</button>
-          </div>
-        ) : null}
-      </section>
     </div>
   )
 }

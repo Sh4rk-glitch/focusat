@@ -5,6 +5,11 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext.tsx'
+import { syncQuestionsFromSupabase } from './data/questions'
+
+document.documentElement.dataset.theme = localStorage.getItem('focusat-theme') ?? 'gold'
+
+void syncQuestionsFromSupabase()
 
 registerSW({ immediate: true })
 

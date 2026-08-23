@@ -8,6 +8,8 @@ import { Review } from './pages/Review'
 import { Leaderboard } from './pages/Leaderboard'
 import { PrivacyPolicy } from './pages/PrivacyPolicy'
 import { TermsOfService } from './pages/TermsOfService'
+import { Settings } from './pages/Settings'
+import { Home } from './pages/Home'
 import { ClickSpark } from './components/ClickSpark'
 import { useAuth } from './context/AuthContext'
 import { AmbientBackground } from './components/AmbientBackground'
@@ -33,7 +35,7 @@ function Shell() {
           transition={{ duration: 0.35 }}
         >
           <Routes location={location}>
-            <Route path="/" element={user ? <Dashboard /> : <AuthPage mode="up" />} />
+            <Route path="/" element={user ? <Dashboard /> : <Home />} />
             <Route path="/session" element={<RequireAuth><Session /></RequireAuth>} />
             <Route path="/results" element={<RequireAuth><Results /></RequireAuth>} />
             <Route path="/signin" element={<AuthPage mode="in" />} />
@@ -43,6 +45,7 @@ function Shell() {
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </motion.div>

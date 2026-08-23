@@ -25,7 +25,7 @@ type AuthCtx = {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (name: string, email: string, password: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
-  updateName: (name: string) => void
+  updateName: (name: string) => Promise<void>
   signOut: () => void
 }
 
@@ -80,9 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
-  const updateName = useCallback((name: string) => {
-    setUser((current) => current ? updateProfile(current.id, name) : current)
-  }, [])
+  const updateName = useCallback(async (name: string) => {
+    if (!user) return
+    const next = await updateProfile(user.id, name)
+    setUser(next)
+  }, [user])
 
   const value = useMemo(
     () => ({ user, signIn, signUp, signInWithGoogle, updateName, signOut }),

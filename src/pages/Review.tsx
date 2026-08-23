@@ -19,7 +19,7 @@ export function Review() {
   const review = questions.map((question) => question.id).join(',')
 
   return <div className="page review-page">
-    <Link to="/dashboard" className="ghost-link">Back to dashboard</Link>
+    <Link to="/dashboard" className="btn btn-ghost back-link">Back to dashboard</Link>
     <p className="eyebrow">Wrong answer bank</p>
     <h1>Practice the questions that got away.</h1>
     <p className="lede">Every miss is saved to your account. Filter the bank, then retake the whole set.</p>

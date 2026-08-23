@@ -8,7 +8,11 @@ Official released questions live on the [SAT Suite Question Bank](https://satsui
 
 ## Supabase setup
 
-The client uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` when supplied, with the project connection configured as the local fallback. Run [supabase.sql](supabase.sql) in the Supabase SQL editor, then enable Google under Authentication > Providers. Add your deployed URL and `http://localhost:5173` to the Supabase URL configuration and Google OAuth redirect allowlist.
+The client uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` when supplied, with the project connection configured as the local fallback. Run [supabase.sql](supabase.sql) and [supabase_questions_seed.sql](supabase_questions_seed.sql) in the Supabase SQL editor, then enable Google under Authentication > Providers. Add your deployed URL and `http://localhost:5173` to the Supabase URL configuration and Google OAuth redirect allowlist.
+
+At startup, the app loads valid rows from `questions` and replaces the bundled question bank. If Supabase is unavailable or empty, it automatically uses the bundled questions.
+
+To upload the complete current bank (64 questions), set the Supabase service-role key only in your local terminal and run `npm run upload:questions`. Never add that key to `VITE_*` variables or commit it.
 
 For Google Cloud Console, add exactly `https://ahlkdbxtebsltrxhrbyz.supabase.co/auth/v1/callback` as an authorized redirect URI. Do not add the Google client secret to this frontend or commit it to the repository.
 

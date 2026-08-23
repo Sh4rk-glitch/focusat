@@ -55,12 +55,14 @@ export function Session() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const preset = params.get('mode')
+  const diagnostic = params.get('diagnostic') === '1'
   const reviewIds = (params.get('review') ?? '').split(',').filter(Boolean)
   const startMode: SessionMode | null =
-    preset === 'math' || preset === 'ela' || preset === 'mix' ? preset : null
+    diagnostic ? 'mix' : preset === 'math' || preset === 'ela' || preset === 'mix' ? preset : null
 
   const [mode, setMode] = useState<SessionMode | null>(startMode)
   const [difficulty, setDifficulty] = useState<Difficulty | 'all'>('all')
+  const [difficultyOpen, setDifficultyOpen] = useState(false)
   const [phase, setPhase] = useState<Phase>(startMode ? 'intro' : 'setup')
   const [question, setQuestion] = useState<Question | null>(null)
   const [usedIds, setUsedIds] = useState<string[]>([])
@@ -344,7 +346,7 @@ export function Session() {
           animate={{ opacity: 1, y: 0 }}
         >
           <p className="eyebrow">Choose a lane</p>
-          <button type="button" className="ghost-link back-link" onClick={() => navigate('/dashboard')}>
+          <button type="button" className="btn btn-ghost back-link" onClick={() => navigate('/dashboard')}>
             Back to dashboard
           </button>
           <h1>What should this eight minutes hunt?</h1>
@@ -367,16 +369,23 @@ export function Session() {
           </div>
           <label className="difficulty-picker">
             Difficulty
-            <select
-              value={difficulty}
-              onChange={(e) => {
-                const next = e.target.value as Difficulty | 'all'
-                difficultyRef.current = next
-                setDifficulty(next)
-              }}
-            >
-              {DIFFICULTIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-            </select>
+            <span className="difficulty-menu">
+              <button type="button" className="difficulty-trigger" aria-haspopup="listbox" aria-expanded={difficultyOpen} onClick={() => setDifficultyOpen((open) => !open)}>
+                {DIFFICULTIES.find((item) => item.id === difficulty)?.label}
+                <span className={`difficulty-chevron ${difficultyOpen ? 'is-open' : ''}`} aria-hidden="true" />
+              </button>
+              {difficultyOpen ? (
+                <span className="difficulty-options" role="listbox" aria-label="Difficulty levels">
+                  {DIFFICULTIES.map((item) => (
+                    <button key={item.id} type="button" role="option" aria-selected={difficulty === item.id} className={difficulty === item.id ? 'is-selected' : ''} onClick={() => {
+                      difficultyRef.current = item.id
+                      setDifficulty(item.id)
+                      setDifficultyOpen(false)
+                    }}>{item.label}</button>
+                  ))}
+                </span>
+              ) : null}
+            </span>
           </label>
         </motion.div>
       ) : null}
@@ -388,12 +397,13 @@ export function Session() {
           animate={{ opacity: 1, scale: 1 }}
         >
           <p className="eyebrow">
-            {mode === 'mix' ? 'Mix' : mode === 'math' ? 'Math' : 'ELA'} · adaptive
+            {diagnostic ? 'Your diagnostic' : `${mode === 'mix' ? 'Mix' : mode === 'math' ? 'Math' : 'ELA'} · adaptive`}
           </p>
-          <h1>Stay on this screen.</h1>
+          <h1>{diagnostic ? 'Let’s map your starting line.' : 'Stay on this screen.'}</h1>
           <p>
-            Alt+Tab, Escape, another window, or hiding the tab all count as leaks.
-            The clock does not pause.
+            {diagnostic
+              ? 'Answer naturally. Focusat uses correctness, response time, and focus leaks to estimate your starting point and choose what to practice next.'
+              : 'Alt+Tab, Escape, another window, or hiding the tab all count as leaks. The clock does not pause.'}
             {weakNow ? ` Current weak spot: ${SKILL_LABELS[weakNow]}.` : ''}
           </p>
           <button type="button" className="btn btn-gold" onClick={() => void enterFocus()}>

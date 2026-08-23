@@ -1,5 +1,6 @@
 import type { Question } from '../types'
 import { EXTRA_QUESTIONS } from './extraBank'
+import { supabase } from '../lib/supabase'
 
 const CORE: Question[] = [
   {
@@ -353,6 +354,26 @@ const CORE: Question[] = [
 ]
 
 export const QUESTIONS: Question[] = [...CORE, ...EXTRA_QUESTIONS]
+
+function isQuestion(value: unknown): value is Question {
+  if (!value || typeof value !== 'object') return false
+  const row = value as Partial<Question>
+  return typeof row.id === 'string' &&
+    (row.section === 'Math' || row.section === 'Reading' || row.section === 'Writing') &&
+    typeof row.prompt === 'string' && Array.isArray(row.choices) && row.choices.length === 4 &&
+    typeof row.answer === 'number' && row.answer >= 0 && row.answer <= 3 && typeof row.explain === 'string'
+}
+
+export async function syncQuestionsFromSupabase(): Promise<void> {
+  const { data, error } = await supabase.from('questions').select('*')
+  if (error) {
+    console.warn('Using bundled questions; Supabase question sync failed.', error.message)
+    return
+  }
+  const remote = (data ?? []).filter(isQuestion)
+  if (remote.length === 0) return
+  QUESTIONS.splice(0, QUESTIONS.length, ...remote)
+}
 
 export const SESSION_QUESTION_COUNT = 8
 export const SESSION_SECONDS = 8 * 60
