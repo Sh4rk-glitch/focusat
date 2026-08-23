@@ -983,6 +983,9 @@ a.btn {
   padding: 0.8rem 0.9rem;
 }
 
+.google-button { gap: 0.55rem; }
+.google-mark { color: #4285f4; font-weight: 600; font-size: 1.1rem; }
+
 .auth-card input:focus, select:focus { outline: 2px solid var(--gold); outline-offset: 2px; }
 .back-link { margin: 0.5rem 0 0; }
 .difficulty-picker, .settings-grid label { display: grid; gap: 0.35rem; color: var(--muted); font-size: 0.85rem; }
@@ -1009,6 +1012,29 @@ a.btn {
   color: var(--bad);
   margin: 0;
 }
+
+.leaderboard-page { max-width: 900px; }
+.leaderboard-title { font-family: Fraunces, serif; font-size: clamp(2.8rem, 7vw, 5.8rem); line-height: 0.95; max-width: 10ch; margin: 0 0 1rem; }
+.leaderboard-intro { color: var(--muted); max-width: 30rem; line-height: 1.5; margin-bottom: 2.5rem; }
+.leaderboard-table { border-top: 1px solid var(--line); }
+.leader-row { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto auto; gap: 1rem; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--line); }
+.leader-row > strong { color: var(--gold); font-family: Fraunces, serif; font-size: 1.25rem; }
+.leader-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leader-row b, .leader-row em { font-size: 0.9rem; font-weight: 500; font-style: normal; text-align: right; }
+.leader-row small { color: var(--muted); font-size: 0.72rem; font-weight: 400; }
+.leader-row.is-you { background: rgba(228, 188, 106, 0.08); padding-inline: 0.7rem; }
+.home-cta { display: flex; justify-content: space-between; align-items: center; gap: 2rem; margin: 4rem 0; padding: 2rem; border: 1px solid rgba(228, 188, 106, 0.32); border-radius: 1.1rem; background: linear-gradient(120deg, rgba(228, 188, 106, 0.14), rgba(255, 255, 255, 0.03)); }
+.home-cta h2 { font-family: Fraunces, serif; font-size: clamp(1.8rem, 4vw, 3rem); margin: 0 0 0.55rem; }
+.home-cta p:last-child { max-width: 34rem; color: var(--muted); line-height: 1.5; margin: 0; }
+.policy-content { max-width: 720px; padding: 8vh 0 4rem; color: var(--muted); line-height: 1.7; }
+.policy-content h1, .policy-content h2 { color: var(--ink); font-family: Fraunces, serif; font-weight: 500; }
+.policy-content h1 { font-size: clamp(2.6rem, 7vw, 5rem); line-height: 1; margin: 0 0 1rem; }
+.policy-content h2 { font-size: 1.45rem; margin: 2.3rem 0 0.6rem; }
+.policy-content p { margin: 0 0 1rem; }
+.policy-content ul { padding-left: 1.3rem; margin: 0 0 1rem; }
+.policy-content li { padding-left: 0.25rem; margin: 0.45rem 0; }
+.policy-content strong { color: var(--ink); }
+.policy-date { color: var(--ink); }
 
 .auth-switch {
   color: var(--muted);
@@ -1264,4 +1290,8 @@ a.btn {
     grid-template-columns: 1fr;
     gap: 0.2rem;
   }
+  .home-cta { flex-direction: column; align-items: flex-start; padding: 1.25rem; }
+  .home-cta .btn { width: 100%; }
+  .leader-row { grid-template-columns: 2.2rem minmax(0, 1fr) auto; gap: 0.55rem; }
+  .leader-row em { grid-column: 2 / -1; grid-row: 2; text-align: left; }
 }

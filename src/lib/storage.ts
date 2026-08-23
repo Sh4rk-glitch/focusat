@@ -10,6 +10,7 @@ import type {
 } from '../types'
 import { currentUser } from './auth'
 import { emptySkills, recommendedMode } from './adaptive'
+import { supabase } from './supabase'
 
 const GUEST_KEY = 'focusat-v1'
 
@@ -35,6 +36,13 @@ type Store = Stats & {
   review: ReviewItem[]
   itemLog: ItemLog[]
   lastMode: SessionMode | null
+}
+
+export type LeaderboardEntry = {
+  user_id: string
+  name: string
+  questions_answered: number
+  leaks: number
 }
 
 function emptyStore(): Store {
@@ -95,6 +103,46 @@ function writeStore(store: Store, key = ns()): void {
   localStorage.setItem(key, JSON.stringify(store))
 }
 
+async function pushRemoteStore(store: Store, userId: string): Promise<void> {
+  const user = currentUser()
+  const [progress, leaderboard] = await Promise.all([
+    supabase.from('user_progress').upsert({ user_id: userId, data: store, updated_at: new Date().toISOString() }),
+    supabase.from('leaderboard').upsert({
+      user_id: userId,
+      name: user?.name ?? 'Learner',
+      questions_answered: store.totalQuestions,
+      leaks: store.history.reduce((sum, item) => sum + item.distractions, 0),
+      updated_at: new Date().toISOString(),
+    }),
+  ])
+  if (progress.error) console.warn('Could not sync progress.', progress.error.message)
+  if (leaderboard.error) console.warn('Could not sync leaderboard.', leaderboard.error.message)
+}
+
+export async function hydrateProgress(userId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('user_progress')
+    .select('data')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) {
+    console.warn('Could not load synced progress.', error.message)
+    return
+  }
+  if (data?.data) writeStore(data.data as Store, `focusat-v1:${userId}`)
+}
+
+export async function loadLeaderboard(): Promise<LeaderboardEntry[]> {
+  const { data, error } = await supabase
+    .from('leaderboard')
+    .select('user_id, name, questions_answered, leaks')
+    .order('questions_answered', { ascending: false })
+    .order('leaks', { ascending: true })
+    .limit(50)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as LeaderboardEntry[]
+}
+
 export function loadStats(): Stats {
   const store = readStore()
   return {
@@ -133,7 +181,10 @@ export function loadWrongQuestionIds(): string[] {
 }
 
 export function resetProgress(): void {
-  writeStore(emptyStore())
+  const store = emptyStore()
+  writeStore(store)
+  const user = currentUser()
+  if (user) void pushRemoteStore(store, user.id)
 }
 
 export function loadLastMode(): SessionMode | null {
@@ -146,7 +197,10 @@ export function saveEngine(partial: {
   itemLog?: ItemLog[]
 }): void {
   const prev = readStore()
-  writeStore({ ...prev, ...partial })
+  const next = { ...prev, ...partial }
+  writeStore(next)
+  const user = currentUser()
+  if (user) void pushRemoteStore(next, user.id)
 }
 
 export function adoptGuestProgress(userId: string): void {
@@ -177,12 +231,15 @@ export function recordCompletion(result: SessionResult): Stats {
     return loadStats()
   }
   if (result.forfeited) {
-    writeStore({
+    const next = {
       ...prev,
       lastDistractions: result.distractions,
       lastMode: result.mode,
       history,
-    })
+    }
+    writeStore(next)
+    const user = currentUser()
+    if (user) void pushRemoteStore(next, user.id)
     return loadStats()
   }
 
@@ -196,7 +253,7 @@ export function recordCompletion(result: SessionResult): Stats {
     streak = 1
   }
 
-  writeStore({
+  const next = {
     ...prev,
     streak,
     bestStreak: Math.max(prev.bestStreak, streak),
@@ -208,7 +265,10 @@ export function recordCompletion(result: SessionResult): Stats {
     lastDistractions: result.distractions,
     lastMode: result.mode,
     history,
-  })
+  }
+  writeStore(next)
+  const user = currentUser()
+  if (user) void pushRemoteStore(next, user.id)
   return loadStats()
 }
 

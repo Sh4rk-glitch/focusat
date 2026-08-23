@@ -51,7 +51,8 @@ export function difficultyLabel(difficulty: number): Difficulty {
 
 export function estimatedSatScore(rating: number): number {
   const curve = 1 / (1 + Math.exp(-(rating - 1000) / 190))
-  return Math.max(200, Math.min(800, Math.round(200 + curve * 600)))
+  const sectionScore = 200 + curve * 600
+  return Math.max(200, Math.min(800, Math.round(sectionScore / 10) * 10))
 }
 
 export function updateReview(

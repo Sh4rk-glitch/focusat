@@ -1,4 +1,5 @@
 import type { User } from '../types'
+import { supabase } from './supabase'
 
 const USERS_KEY = 'focusat-users'
 const SESSION_KEY = 'focusat-session'
@@ -45,6 +46,14 @@ export function currentUser(): User | null {
   }
 }
 
+export function fromSupabaseUser(authUser: { id: string; email?: string; user_metadata?: { name?: string; full_name?: string } }): User {
+  return {
+    id: authUser.id,
+    email: authUser.email ?? '',
+    name: authUser.user_metadata?.name ?? authUser.user_metadata?.full_name ?? authUser.email?.split('@')[0] ?? 'Learner',
+  }
+}
+
 export function setCurrentUser(user: User | null): void {
   if (!user) localStorage.removeItem(SESSION_KEY)
   else localStorage.setItem(SESSION_KEY, JSON.stringify(user))
@@ -59,6 +68,20 @@ export async function signUp(
   if (!cleanEmail.includes('@')) throw new Error('Enter a valid email.')
   if (password.length < 6) throw new Error('Password must be at least 6 characters.')
   if (!name.trim()) throw new Error('Add a name so the dashboard feels like yours.')
+
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password,
+    options: { data: { name: name.trim() } },
+  })
+  if (!error && data.user) {
+    const user = fromSupabaseUser(data.user)
+    setCurrentUser(user)
+    return user
+  }
+  if (error && !error.message.toLowerCase().includes('failed to fetch')) {
+    throw new Error(error.message)
+  }
 
   const users = readUsers()
   if (users.some((u) => u.email === cleanEmail)) {
@@ -82,6 +105,16 @@ export async function signUp(
 
 export async function signIn(email: string, password: string): Promise<User> {
   const cleanEmail = email.trim().toLowerCase()
+  const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password })
+  if (!error && data.user) {
+    const user = fromSupabaseUser(data.user)
+    setCurrentUser(user)
+    return user
+  }
+  if (error && !error.message.toLowerCase().includes('failed to fetch')) {
+    throw new Error(error.message)
+  }
+
   const users = readUsers()
   const found = users.find((u) => u.email === cleanEmail)
   if (!found) throw new Error('No account with that email.')
@@ -90,6 +123,23 @@ export async function signIn(email: string, password: string): Promise<User> {
   const pub = toPublic(found)
   setCurrentUser(pub)
   return pub
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  })
+  if (error) {
+    const message = error.message.toLowerCase()
+    if (message.includes('provider is not enabled')) {
+      throw new Error('Google sign-in is not enabled for this Supabase project yet.')
+    }
+    if (message.includes('redirect_uri')) {
+      throw new Error('Google OAuth redirect settings do not match this app.')
+    }
+    throw new Error(error.message)
+  }
 }
 
 export function signOut(): void {

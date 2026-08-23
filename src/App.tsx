@@ -5,6 +5,9 @@ import { Results } from './pages/Results'
 import { AuthPage } from './pages/Auth'
 import { Dashboard } from './pages/Dashboard'
 import { Review } from './pages/Review'
+import { Leaderboard } from './pages/Leaderboard'
+import { PrivacyPolicy } from './pages/PrivacyPolicy'
+import { TermsOfService } from './pages/TermsOfService'
 import { ClickSpark } from './components/ClickSpark'
 import { useAuth } from './context/AuthContext'
 import { AmbientBackground } from './components/AmbientBackground'
@@ -37,6 +40,9 @@ function Shell() {
             <Route path="/signup" element={<AuthPage mode="up" />} />
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/review" element={<RequireAuth><Review /></RequireAuth>} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </motion.div>

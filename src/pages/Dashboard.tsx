@@ -158,6 +158,9 @@ export function Dashboard() {
           <Link to="/review" className="btn btn-ghost">
             Review wrong answers
           </Link>
+          <Link to="/leaderboard" className="btn btn-ghost">
+            Leaderboard
+          </Link>
         </div>
       </section>
 

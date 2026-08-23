@@ -126,14 +126,20 @@ export function Home() {
       </section>
 
       <div className="ticker">
-        <div className="ticker-track">
+        <motion.div
+          className="ticker-track"
+          initial={{ x: '8%', opacity: 0 }}
+          whileInView={{ x: 0, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+        >
           {Array.from({ length: 2 }).map((_, k) => (
             <p key={k}>
               Algebra · Adaptive Elo · Mix / Math / ELA · Desmos · Alt+Tab leaks
               · You vs should · Review queue · Dashboard ·{' '}
             </p>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       <div ref={pin} className="pin-wrap">
@@ -141,12 +147,20 @@ export function Home() {
           <p className="eyebrow">Scroll the suite</p>
           <h2 className="pin-title">Built like the test. Timed like a dare.</h2>
           <motion.div className="pin-row" style={{ x: smoothX }}>
-            {modules.map((m) => (
-              <div key={m.k} className="pin-card">
+            {modules.map((m, i) => (
+              <motion.div
+                key={m.k}
+                className="pin-card"
+                initial={{ opacity: 0, y: 36, rotate: i % 2 ? 2 : -2 }}
+                whileInView={{ opacity: 1, y: 0, rotate: 0 }}
+                viewport={{ once: true, margin: '-10%' }}
+                transition={{ delay: i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -10, rotate: i % 2 ? -1 : 1 }}
+              >
                 <span>{m.k}</span>
                 <h3>{m.t}</h3>
                 <p>{m.d}</p>
-              </div>
+              </motion.div>
             ))}
           </motion.div>
         </div>
@@ -225,9 +239,28 @@ export function Home() {
         </motion.p>
       </section>
 
+      {!user ? (
+        <motion.section
+          className="home-cta"
+          initial={{ opacity: 0, scale: 0.96 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: '-12%' }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div>
+            <p className="eyebrow">Keep the evidence</p>
+            <h2>Your practice should follow you.</h2>
+            <p>Save your streak, carry your weak spots between devices, and see how steadily you can answer without leaking focus.</p>
+          </div>
+          <Link to="/signup" className="btn btn-gold">Create your account <span className="btn-shine" /></Link>
+        </motion.section>
+      ) : null}
+
       <footer className="foot">
         <span>focusat</span>
         <span>Free. Original practice — not College Board material.</span>
+        <Link to="/privacy-policy" className="text-link">Privacy Policy</Link>
+        <Link to="/terms-of-service" className="text-link">Terms of Service</Link>
       </footer>
     </div>
   )

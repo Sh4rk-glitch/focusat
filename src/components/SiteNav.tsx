@@ -20,6 +20,7 @@ export function SiteNav({ compact = false }: Props) {
         ) : (
           <Link to="/signin">Sign in</Link>
         )}
+        <Link to="/leaderboard">Leaderboard</Link>
         <Link to="/session" className="nav-cta">
           Start
         </Link>

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { Logo } from '../components/Logo'
 
 export function AuthPage({ mode }: { mode: 'in' | 'up' }) {
-  const { user, signIn, signUp } = useAuth()
+  const { user, signIn, signUp, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const next =
@@ -94,6 +94,22 @@ export function AuthPage({ mode }: { mode: 'in' | 'up' }) {
         <button type="submit" className="btn btn-gold" disabled={busy}>
           {busy ? 'Working…' : mode === 'up' ? 'Create account' : 'Sign in'}
         </button>
+        <button
+          type="button"
+          className="btn btn-ghost google-button"
+          disabled={busy}
+          onClick={() => {
+            setError('')
+            setBusy(true)
+            void signInWithGoogle().catch((err) => {
+              setError(err instanceof Error ? err.message : 'Could not continue with Google.')
+              setBusy(false)
+            })
+          }}
+        >
+          <span className="google-mark" aria-hidden="true">G</span>
+          Continue with Google
+        </button>
         <p className="auth-switch">
           {mode === 'up' ? (
             <>
@@ -106,8 +122,7 @@ export function AuthPage({ mode }: { mode: 'in' | 'up' }) {
           )}
         </p>
         <p className="legal-note">
-          Accounts live in this browser (hashed password). Clearing site data
-          signs you out.
+          Your progress syncs across devices when you use the same account.
         </p>
         </motion.form>
       </div>
