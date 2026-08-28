@@ -47,14 +47,15 @@ export function Logo({ className = '', wordmark = true }: Props) {
         <motion.circle initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.1, type: 'spring' }} cx="32" cy="32" r="3.2" fill="url(#fa-gold)" />
       </svg>
       {wordmark ? (
-        <svg className="brand-word" viewBox="0 0 168 28" aria-label="focusat">
+        <svg className="brand-word" viewBox="0 0 100 28" aria-label="focusat">
           <text
             x="0"
-            y="22"
+            y="21"
+            textAnchor="start"
             fill="currentColor"
             fontFamily="Outfit, sans-serif"
             fontSize="22"
-            letterSpacing="2.4"
+            letterSpacing="1.2"
           >
             focusat
           </text>

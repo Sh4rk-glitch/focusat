@@ -62,6 +62,13 @@ export type Stats = {
   totalQuestions: number
   lastScore: number | null
   lastDistractions: number
+  points: number
+}
+
+export type Inventory = {
+  streakFreeze3: number
+  streakRestore: number
+  focusMultiplier: number
 }
 
 export type SessionResult = {

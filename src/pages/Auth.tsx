@@ -94,22 +94,15 @@ export function AuthPage({ mode }: { mode: 'in' | 'up' }) {
         <button type="submit" className="btn btn-gold" disabled={busy}>
           {busy ? 'Working…' : mode === 'up' ? 'Create account' : 'Sign in'}
         </button>
-        <button
-          type="button"
-          className="btn btn-ghost google-button"
-          disabled={busy}
-          onClick={() => {
+        <button type="button" className="btn btn-ghost google-button" disabled={busy} onClick={() => {
+            if (busy) return
             setError('')
             setBusy(true)
             void signInWithGoogle().catch((err) => {
               setError(err instanceof Error ? err.message : 'Could not continue with Google.')
               setBusy(false)
             })
-          }}
-        >
-          <span className="google-mark" aria-hidden="true">G</span>
-          Continue with Google
-        </button>
+          }}><span className="google-mark" aria-hidden="true">G</span>Continue with Google</button>
         <p className="auth-switch">
           {mode === 'up' ? (
             <>

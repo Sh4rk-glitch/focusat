@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll, useSpring, useTransform } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { SESSION_QUESTION_COUNT, SESSION_SECONDS } from '../data/questions'
@@ -8,6 +8,7 @@ import { Magnet } from '../components/Magnet'
 import { ScrollProgress } from '../components/ScrollProgress'
 import { SiteNav } from '../components/SiteNav'
 import { SpotlightCard } from '../components/SpotlightCard'
+import { Logo } from '../components/Logo'
 
 const words = ['Eight', 'minutes.', 'Then', 'you’re', 'done.']
 
@@ -25,6 +26,7 @@ export function Home() {
   const stats = loadStats()
   const hasHistory = stats.totalSessions > 0
   const minutes = Math.round(SESSION_SECONDS / 60)
+  const [introDone, setIntroDone] = useState(false)
   const story = useRef<HTMLDivElement>(null)
   const gallery = useRef<HTMLDivElement>(null)
   const { scrollYProgress: storyProgress } = useScroll({
@@ -42,8 +44,30 @@ export function Home() {
   const galleryX = useTransform(galleryProgress, [0, 1], ['0%', '-72%'])
   const smoothGalleryX = useSpring(galleryX, { stiffness: 80, damping: 24, mass: 0.4 })
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIntroDone(true), 3100)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   return (
-    <div className="page home">
+    <div className={`page home ${introDone ? 'landing-is-ready' : 'landing-is-intro'}`}>
+      <AnimatePresence>
+        {!introDone ? (
+          <motion.div className="landing-intro" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.55 }}>
+            <motion.div
+              className="landing-intro-logo"
+              initial={{ scale: 0.35, opacity: 0, y: 24 }}
+              animate={{ scale: [0.35, 1, 1, 0.55], opacity: [0, 1, 1, 0], y: [24, 0, 0, -8], x: [0, 0, 0, 0] }}
+              transition={{ duration: 2.85, times: [0, 0.2, 0.7, 1], ease: [0.22, 1, 0.36, 1] }}
+            >
+              <Logo />
+            </motion.div>
+            <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: [0, 1, 1, 0], y: [18, 0, 0, -12] }} transition={{ duration: 2.4, times: [0, 0.25, 0.68, 1], delay: 0.25 }}>
+              8 minutes is all it takes.
+            </motion.h1>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       <ScrollProgress />
       <div className="aurora" aria-hidden="true">
         <span />
@@ -92,10 +116,7 @@ export function Home() {
           transition={{ delay: 0.7 }}
         >
           <Magnet>
-            <Link to="/session" className="btn btn-gold">
-              Begin session
-              <span className="btn-shine" />
-            </Link>
+            <Link to="/session" className="btn btn-gold">Start practice <span className="btn-shine" /></Link>
           </Magnet>
           <Link to={user ? '/dashboard' : '/signin'} className="btn btn-ghost">
             {user ? 'Open dashboard' : 'Sign in to save'}

@@ -20,10 +20,10 @@ export function SiteNav({ compact = false }: Props) {
         ) : (
           <Link to="/signin">Sign in</Link>
         )}
+        {user ? <Link to="/analytics">Analytics</Link> : null}
+        {user ? <Link to="/shop">Shop</Link> : null}
         <Link to="/leaderboard">Leaderboard</Link>
-        <Link to="/session" className="nav-cta">
-          Start
-        </Link>
+        <Link to="/session" className="nav-cta">Start</Link>
       </nav>
     </header>
   )

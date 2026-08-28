@@ -1,6 +1,7 @@
 import type {
   ItemLog,
   ReviewItem,
+  Inventory,
   SessionMode,
   SessionRecord,
   SessionResult,
@@ -28,6 +29,7 @@ const empty: Stats = {
   totalQuestions: 0,
   lastScore: null,
   lastDistractions: 0,
+  points: 0,
 }
 
 type Store = Stats & {
@@ -36,6 +38,8 @@ type Store = Stats & {
   review: ReviewItem[]
   itemLog: ItemLog[]
   lastMode: SessionMode | null
+  inventory: Inventory
+  frozenDays: string[]
 }
 
 export type LeaderboardEntry = {
@@ -53,6 +57,8 @@ function emptyStore(): Store {
     review: [],
     itemLog: [],
     lastMode: null,
+    inventory: { streakFreeze3: 0, streakRestore: 0, focusMultiplier: 0 },
+    frozenDays: [],
   }
 }
 
@@ -74,6 +80,34 @@ function shiftDay(key: string, delta: number): string {
   return `${yy}-${mm}-${dd}`
 }
 
+function sessionDayKey(timestamp: string): string {
+  const date = new Date(timestamp)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function calculateStreak(history: SessionRecord[], frozenDays: string[] = []): { streak: number; bestStreak: number; lastCompletedDate: string | null } {
+  const today = todayKey()
+  const days = [...new Set([...history.filter((item) => !item.forfeited).map((item) => sessionDayKey(item.at)), ...frozenDays.filter((day) => day <= today)])].sort().reverse()
+  if (!days.length) return { streak: 0, bestStreak: 0, lastCompletedDate: null }
+  const yesterday = shiftDay(today, -1)
+  let streak = days[0] === today || days[0] === yesterday ? 1 : 0
+  for (let index = 1; streak > 0 && index < days.length; index += 1) {
+    if (days[index] !== shiftDay(days[index - 1], -1)) break
+    streak += 1
+  }
+  let bestStreak = 1
+  let run = 1
+  for (let index = 1; index < days.length; index += 1) {
+    if (days[index] === shiftDay(days[index - 1], -1)) run += 1
+    else run = 1
+    bestStreak = Math.max(bestStreak, run)
+  }
+  return { streak, bestStreak, lastCompletedDate: days[0] }
+}
+
 function mergeSkills(raw?: Partial<Record<SkillId, SkillCell>>): Record<SkillId, SkillCell> {
   const merged = { ...emptySkills(), ...raw }
   for (const cell of Object.values(merged)) cell.totalTimeMs ??= 0
@@ -93,6 +127,8 @@ function readStore(key = ns()): Store {
       review: parsed.review ?? [],
       itemLog: parsed.itemLog ?? [],
       lastMode: parsed.lastMode ?? null,
+      inventory: { streakFreeze3: parsed.inventory?.streakFreeze3 ?? 0, streakRestore: parsed.inventory?.streakRestore ?? 0, focusMultiplier: parsed.inventory?.focusMultiplier ?? 0 },
+      frozenDays: parsed.frozenDays ?? [],
     }
   } catch {
     return emptyStore()
@@ -145,15 +181,17 @@ export async function loadLeaderboard(): Promise<LeaderboardEntry[]> {
 
 export function loadStats(): Stats {
   const store = readStore()
+  const streak = calculateStreak(store.history, store.frozenDays)
   return {
-    streak: store.streak,
-    bestStreak: store.bestStreak,
-    lastCompletedDate: store.lastCompletedDate,
+    streak: streak.streak,
+    bestStreak: Math.max(store.bestStreak, streak.bestStreak),
+    lastCompletedDate: streak.lastCompletedDate,
     totalSessions: store.totalSessions,
     totalCorrect: store.totalCorrect,
     totalQuestions: store.totalQuestions,
     lastScore: store.lastScore,
     lastDistractions: store.lastDistractions,
+    points: store.points,
   }
 }
 
@@ -171,6 +209,68 @@ export function loadReview(): ReviewItem[] {
 
 export function loadItemLog(): ItemLog[] {
   return readStore().itemLog
+}
+
+export function loadInventory(): Inventory {
+  return readStore().inventory
+}
+
+export function spendPoints(amount: number): boolean {
+  return buyShopItem('freeze', amount)
+}
+
+export function buyShopItem(item: 'freeze' | 'restore' | 'multiplier', amount: number): boolean {
+  const store = readStore()
+  if (store.points < amount) return false
+  const key = item === 'freeze' ? 'streakFreeze3' : item === 'restore' ? 'streakRestore' : 'focusMultiplier'
+  const next = { ...store, points: store.points - amount, inventory: { ...store.inventory, [key]: store.inventory[key] + 1 } }
+  writeStore(next)
+  const user = currentUser()
+  if (user) void pushRemoteStore(next, user.id)
+  return true
+}
+
+export function redeemStreakFreeze(): boolean {
+  const store = readStore()
+  if (store.inventory.streakFreeze3 < 1) return false
+  const frozenDays = [...store.frozenDays]
+  const start = new Date()
+  for (let index = 1; index <= 3; index += 1) {
+    const date = new Date(start)
+    date.setDate(date.getDate() + index)
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    if (!frozenDays.includes(key)) frozenDays.push(key)
+  }
+  const next = { ...store, frozenDays, inventory: { ...store.inventory, streakFreeze3: store.inventory.streakFreeze3 - 1 } }
+  writeStore(next)
+  const user = currentUser()
+  if (user) void pushRemoteStore(next, user.id)
+  return true
+}
+
+export function redeemStreakRestore(): boolean {
+  const store = readStore()
+  const offer = getRestoreOffer(store)
+  if (!offer || store.inventory.streakRestore < 1) return false
+  const next = { ...store, inventory: { ...store.inventory, streakRestore: store.inventory.streakRestore - 1 }, frozenDays: [...store.frozenDays, ...offer.days].filter((day, index, all) => all.indexOf(day) === index) }
+  writeStore(next)
+  const user = currentUser()
+  if (user) void pushRemoteStore(next, user.id)
+  return true
+}
+
+function getRestoreOffer(store: Store): { days: string[] } | null {
+  const completed = [...new Set(store.history.filter((item) => !item.forfeited).map((item) => sessionDayKey(item.at)))].sort().reverse()
+  if (!completed.length) return null
+  const eligibleDate = shiftDay(completed[0], 1)
+  if (todayKey() !== eligibleDate) return null
+  const missingDays = Array.from({ length: Math.max(0, store.streak || 1) }, (_, index) => shiftDay(completed[0], index + 1))
+  return { days: missingDays.slice(0, Math.max(1, store.streak)) }
+}
+
+export function canRedeemStreakRestore(): boolean {
+  const store = readStore()
+  return store.inventory.streakRestore > 0 && getRestoreOffer(store) !== null
 }
 
 export function loadWrongQuestionIds(): string[] {
@@ -235,6 +335,7 @@ export function recordCompletion(result: SessionResult): Stats {
       ...prev,
       lastDistractions: result.distractions,
       lastMode: result.mode,
+      points: prev.points + Math.max(0, result.total),
       history,
     }
     writeStore(next)
@@ -263,6 +364,7 @@ export function recordCompletion(result: SessionResult): Stats {
     totalQuestions: prev.totalQuestions + result.total,
     lastScore: result.correct,
     lastDistractions: result.distractions,
+    points: prev.points + Math.max(0, result.total),
     lastMode: result.mode,
     history,
   }
