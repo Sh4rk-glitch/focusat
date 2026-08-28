@@ -127,7 +127,11 @@ function readStore(key = ns()): Store {
       review: parsed.review ?? [],
       itemLog: parsed.itemLog ?? [],
       lastMode: parsed.lastMode ?? null,
-      inventory: { streakFreeze3: parsed.inventory?.streakFreeze3 ?? 0, streakRestore: parsed.inventory?.streakRestore ?? 0, focusMultiplier: parsed.inventory?.focusMultiplier ?? 0 },
+      inventory: {
+        streakFreeze3: parsed.inventory?.streakFreeze3 ?? 0,
+        streakRestore: parsed.inventory?.streakRestore ?? 0,
+        focusMultiplier: parsed.inventory?.focusMultiplier ?? 0,
+      },
       frozenDays: parsed.frozenDays ?? [],
     }
   } catch {
@@ -137,35 +141,76 @@ function readStore(key = ns()): Store {
 
 function writeStore(store: Store, key = ns()): void {
   localStorage.setItem(key, JSON.stringify(store))
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('focusat-storage-sync'))
+  }
 }
 
 async function pushRemoteStore(store: Store, userId: string): Promise<void> {
   const user = currentUser()
-  const [progress, leaderboard] = await Promise.all([
-    supabase.from('user_progress').upsert({ user_id: userId, data: store, updated_at: new Date().toISOString() }),
-    supabase.from('leaderboard').upsert({
-      user_id: userId,
-      name: user?.name ?? 'Learner',
-      questions_answered: store.totalQuestions,
-      leaks: store.history.reduce((sum, item) => sum + item.distractions, 0),
-      updated_at: new Date().toISOString(),
-    }),
-  ])
-  if (progress.error) console.warn('Could not sync progress.', progress.error.message)
-  if (leaderboard.error) console.warn('Could not sync leaderboard.', leaderboard.error.message)
+  try {
+    const [progress, leaderboard] = await Promise.all([
+      supabase.from('user_progress').upsert(
+        {
+          user_id: userId,
+          data: store,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      ),
+      supabase.from('leaderboard').upsert(
+        {
+          user_id: userId,
+          name: user?.name ?? 'Learner',
+          questions_answered: store.totalQuestions,
+          leaks: store.history.reduce((sum, item) => sum + item.distractions, 0),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      ),
+    ])
+
+    if (progress.error) console.warn('Could not sync progress to Supabase:', progress.error.message)
+    if (leaderboard.error) console.warn('Could not sync leaderboard to Supabase:', leaderboard.error.message)
+  } catch (err) {
+    console.warn('Network error while pushing remote store:', err)
+  }
 }
 
 export async function hydrateProgress(userId: string): Promise<void> {
-  const { data, error } = await supabase
-    .from('user_progress')
-    .select('data')
-    .eq('user_id', userId)
-    .maybeSingle()
-  if (error) {
-    console.warn('Could not load synced progress.', error.message)
-    return
+  try {
+    const { data, error } = await supabase
+      .from('user_progress')
+      .select('data')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.warn('Could not load synced progress from Supabase:', error.message)
+      return
+    }
+
+    if (data?.data) {
+      const remoteStore = data.data as Store
+      const localStore = readStore(`focusat-v1:${userId}`)
+      
+      // If remote has more questions or sessions, adopt remote
+      if (remoteStore.totalQuestions >= localStore.totalQuestions) {
+        writeStore(remoteStore, `focusat-v1:${userId}`)
+      } else {
+        // Local has unsynced progress, push local up to cloud
+        void pushRemoteStore(localStore, userId)
+      }
+    } else {
+      // First time user in database, upload initial local store
+      const local = readStore(`focusat-v1:${userId}`)
+      if (local.totalQuestions > 0) {
+        void pushRemoteStore(local, userId)
+      }
+    }
+  } catch (err) {
+    console.warn('Error hydrating progress:', err)
   }
-  if (data?.data) writeStore(data.data as Store, `focusat-v1:${userId}`)
 }
 
 export async function loadLeaderboard(): Promise<LeaderboardEntry[]> {
@@ -223,7 +268,11 @@ export function buyShopItem(item: 'freeze' | 'restore' | 'multiplier', amount: n
   const store = readStore()
   if (store.points < amount) return false
   const key = item === 'freeze' ? 'streakFreeze3' : item === 'restore' ? 'streakRestore' : 'focusMultiplier'
-  const next = { ...store, points: store.points - amount, inventory: { ...store.inventory, [key]: store.inventory[key] + 1 } }
+  const next: Store = {
+    ...store,
+    points: store.points - amount,
+    inventory: { ...store.inventory, [key]: store.inventory[key] + 1 },
+  }
   writeStore(next)
   const user = currentUser()
   if (user) void pushRemoteStore(next, user.id)
@@ -241,7 +290,11 @@ export function redeemStreakFreeze(): boolean {
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     if (!frozenDays.includes(key)) frozenDays.push(key)
   }
-  const next = { ...store, frozenDays, inventory: { ...store.inventory, streakFreeze3: store.inventory.streakFreeze3 - 1 } }
+  const next: Store = {
+    ...store,
+    frozenDays,
+    inventory: { ...store.inventory, streakFreeze3: store.inventory.streakFreeze3 - 1 },
+  }
   writeStore(next)
   const user = currentUser()
   if (user) void pushRemoteStore(next, user.id)
@@ -252,7 +305,11 @@ export function redeemStreakRestore(): boolean {
   const store = readStore()
   const offer = getRestoreOffer(store)
   if (!offer || store.inventory.streakRestore < 1) return false
-  const next = { ...store, inventory: { ...store.inventory, streakRestore: store.inventory.streakRestore - 1 }, frozenDays: [...store.frozenDays, ...offer.days].filter((day, index, all) => all.indexOf(day) === index) }
+  const next: Store = {
+    ...store,
+    inventory: { ...store.inventory, streakRestore: store.inventory.streakRestore - 1 },
+    frozenDays: [...store.frozenDays, ...offer.days].filter((day, index, all) => all.indexOf(day) === index),
+  }
   writeStore(next)
   const user = currentUser()
   if (user) void pushRemoteStore(next, user.id)
@@ -310,6 +367,7 @@ export function adoptGuestProgress(userId: string): void {
   if (dest.totalSessions > 0) return
   if (guest.totalSessions === 0 && guest.history.length === 0) return
   writeStore(guest, destKey)
+  void pushRemoteStore(guest, userId)
 }
 
 export function recordCompletion(result: SessionResult): Stats {
@@ -331,7 +389,7 @@ export function recordCompletion(result: SessionResult): Stats {
     return loadStats()
   }
   if (result.forfeited) {
-    const next = {
+    const next: Store = {
       ...prev,
       lastDistractions: result.distractions,
       lastMode: result.mode,
@@ -354,7 +412,7 @@ export function recordCompletion(result: SessionResult): Stats {
     streak = 1
   }
 
-  const next = {
+  const next: Store = {
     ...prev,
     streak,
     bestStreak: Math.max(prev.bestStreak, streak),
