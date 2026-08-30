@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 type Calc = {
   destroy: () => void
   setExpression: (expr: { id: string; latex: string }) => void
+  resize?: () => void
 }
 
 type DesmosApi = {
@@ -54,11 +55,12 @@ export function DesmosPad({ latex }: Props) {
         zoomButtons: true,
         border: false,
         invertedColors: true,
-        fontSize: 14,
+        fontSize: 13,
       })
       if (latex) next.setExpression({ id: 'q', latex })
       calc.current = next
     })
+
     return () => {
       gone = true
       calc.current?.destroy()
@@ -66,10 +68,39 @@ export function DesmosPad({ latex }: Props) {
     }
   }, [latex])
 
+  // Trigger Desmos internal redraw when parent window is resized
+  useEffect(() => {
+    if (!host.current) return
+    const ro = new ResizeObserver(() => {
+      if (calc.current && typeof (calc.current as any).resize === 'function') {
+        ;(calc.current as any).resize()
+      }
+    })
+    ro.observe(host.current)
+    return () => ro.disconnect()
+  }, [])
+
   return (
-    <div className="desmos-wrap">
-      <p className="desmos-label">Desmos</p>
-      <div ref={host} className="desmos-host" />
+    <div
+      className="desmos-wrap"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        ref={host}
+        className="desmos-host"
+        style={{
+          width: '100%',
+          height: '100%',
+          flex: 1,
+          minHeight: 0,
+        }}
+      />
     </div>
   )
 }

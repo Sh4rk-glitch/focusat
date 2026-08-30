@@ -282,7 +282,7 @@ export function Dashboard() {
               <Link to="/session?mode=mix" className="mode-card"><strong>Mixed</strong><span>Keep both sides warm.</span><em>8 questions →</em></Link>
               <Link to="/session?mode=math" className="mode-card"><strong>Math</strong><span>Work through the numbers.</span><em>8 questions →</em></Link>
               <Link to="/session?mode=ela" className="mode-card"><strong>Reading & Writing</strong><span>Sharpen the language side.</span><em>8 questions →</em></Link>
-              <Link to="/doomscroll" className="mode-card" style={{ borderColor: 'rgba(228, 188, 106, 0.45)' }}><strong>DoomScroll 📱</strong><span>Infinite vertical SAT reels.</span><em>Mobile only →</em></Link>
+              <Link to="/doomscroll" className="mode-card" style={{ borderColor: 'rgba(228, 188, 106, 0.45)' }}><strong>DoomScroll</strong><span>Infinite vertical SAT reels.</span><em>Mobile only →</em></Link>
             </div>
           </motion.section>
 
